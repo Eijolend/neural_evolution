@@ -19,8 +19,8 @@ CREEP_FOOD_DECAY = 1
 CREEP_FOOD_MAX = 100
 WORLD_CANVAS = WORLD_WIDTH, WORLD_HEIGHT = 900,900
 WORLD_SIZE = 30,30
-NETWORK = [2,4,2]
-CREEP_COLOR = 255,0,0
+NETWORK = [2,4,3]
+CREEP_COLOR = 255,0,0 #now changes dynamically
 CREEP_NOSE_COLOR = 0,0,255
 BLACK = 0,0,0
 CREEP_DEAD_COLOR = 169,169,169
@@ -38,6 +38,9 @@ clock = pg.time.Clock()
 
 world = np.ones(WORLD_SIZE)*5 + np.random.rand(*WORLD_SIZE)*2
 
+def hsv_color(h,s,v): #h 0-1, s 0-1, v 0-1
+    return np.floor(np.array(hsv_to_rgb(h,s,v))*255)
+    
 def sig(x):
     return 1/(1+np.exp(-x))
 
@@ -64,6 +67,7 @@ class creep:
         self.speed = 0.
         self.food = CREEP_START_FOOD
         self.alive = True
+        self.hue = random()
 
     
     def eat(self):
@@ -98,6 +102,7 @@ class creep:
         outputs = self.brain.think(inputs)
         acc = (outputs[0] - 0.5)*2 * CREEP_ACCELERATION
         turn = (outputs[1] - 0.5)*2 * CREEP_TURN_SPEED
+        self.hue = outputs[2]
         new_speed = self.speed + acc
         self.speed = clamp(0,new_speed,CREEP_MAX_SPEED)
         self.facing = (self.facing + turn) % 360
@@ -107,8 +112,9 @@ class creep:
     
     def draw(self,screen):
         pos = np.rint(np.array(self.pos)).astype(int)
+        creep_color = hsv_color(self.hue,1,1)
         if self.alive:
-            pg.draw.circle(screen,CREEP_COLOR,pos,CREEP_RADIUS,0)
+            pg.draw.circle(screen,creep_color,pos,CREEP_RADIUS,0)
         else:
             pg.draw.circle(screen,CREEP_DEAD_COLOR,pos,CREEP_RADIUS,0)
         pg.draw.circle(screen,BLACK,pos,CREEP_RADIUS,2)
@@ -123,7 +129,7 @@ class creep:
 
 
 
-screen = pg.display.set_mode(WORLD_CANVAS)
+screen = pg.display.set_mode((WORLD_WIDTH+300,WORLD_HEIGHT))
 
 N=10
 
@@ -132,8 +138,7 @@ mybrains = [brain(NETWORK,[np.random.rand(NETWORK[1],NETWORK[0])*2 - 1,np.random
 generation = 1 
 myfont = pg.font.SysFont("Arial",20)
 
-def hsv_color(h,s,v): #h 0-1, s 0-1, v 0-1
-    return np.floor(np.array(hsv_to_rgb(h,s,v))*255)
+
 
 def draw_world(world):
     nx,ny = world.shape
@@ -143,6 +148,15 @@ def draw_world(world):
         pg.draw.rect(screen,hsv_color(0.33,world[x,y]/WORLD_FOOD_MAX,1),(x*dx,y*dy,dx,dy))
 #        pg.draw.rect(screen,hsv_color(120,1,1),(x*dx,y*dy,dx,dy))
     return 
+    
+def draw_statistics(creeps): #this function needs better presentation, constants and should display more useful information
+#    sortedcreeps=[creeps[i] for i in np.argsort(np.array([cr.food for cr in creeps]))[::-1] ]
+    sortedcreeps = creeps #don't sort?
+    pg.draw.rect(screen,BLACK,(WORLD_WIDTH, 0,300,WORLD_HEIGHT))
+    for i in range(len(sortedcreeps)):
+        cr = sortedcreeps[i]
+        pg.draw.rect(screen,(255,0,0),(WORLD_WIDTH + 20, (i+1)*50, cr.food, 20))
+        
         
 while True:
     i=0
@@ -150,6 +164,8 @@ while True:
     mycreeps = [creep((random()*WORLD_WIDTH,random()*WORLD_HEIGHT),int(random()*360),br) for br in mybrains]
     while i<GENERATION_INTERVAL:
         i+=1
+        if not np.any([cr.alive for cr in mycreeps]):
+            break
         for event in pg.event.get():
             if event.type == pg.QUIT: sys.exit()
             
@@ -163,6 +179,7 @@ while True:
             cr.draw(screen)
         gen_text=myfont.render("Generation: %d" % generation,1,(0,0,0))
         screen.blit(gen_text,(0,875))
+        draw_statistics(mycreeps)
         pg.display.flip()
     #the values in the following section should be turned into CONSTANTS
     bestcreeps = [mycreeps[i] for i in np.argsort(np.array([cr.age for cr in mycreeps]))[-2:] ]
