@@ -29,7 +29,7 @@ CREEP_NOSE_RADIUS = 3
 CREEP_ACCELERATION = 0.25
 CREEP_MAX_SPEED = 5
 CREEP_TURN_SPEED = 5
-CREEP_EAT_RATE = 1.5
+CREEP_EAT_RATE = 1.8
 FOOD_GROWTH = 0.005
 WORLD_FOOD_MAX = 100
 GENERATION_INTERVAL = 900
@@ -40,7 +40,7 @@ world = np.ones(WORLD_SIZE)*5 + np.random.rand(*WORLD_SIZE)*2
 
 def hsv_color(h,s,v): #h 0-1, s 0-1, v 0-1
     return np.floor(np.array(hsv_to_rgb(h,s,v))*255)
-    
+
 def sig(x):
     return 1/(1+np.exp(-x))
 
@@ -51,11 +51,11 @@ class brain: #this is a simple neural network with 1 hidden layer
     def __init__ (self,network,params):
         self.network = network
         self.params = params
-        
+
     def think(self,inputs):
         hidden = sig(np.dot(self.params[0],inputs))
         return sig(np.dot(self.params[1],hidden))
-    
+
 class creep:
     def __init__(self,pos,facing,brain):
         #install brain
@@ -69,18 +69,18 @@ class creep:
         self.alive = True
         self.hue = random()
 
-    
+
     def eat(self):
         i = int(self.pos[0] * WORLD_SIZE[0] / WORLD_WIDTH)
         j = int(self.pos[1] * WORLD_SIZE[1] / WORLD_HEIGHT)
         eat_amount = min(world[i,j],CREEP_EAT_RATE,CREEP_FOOD_MAX - self.food)
         self.food += eat_amount
         world[i,j] -= eat_amount
-    
-        
+
+
     def die(self):
         self.alive = False
-    
+
     def move(self):
         x,y = self.pos
         phi = radians(self.facing)
@@ -89,7 +89,7 @@ class creep:
         x = x % WORLD_WIDTH
         y = y % WORLD_HEIGHT
         self.pos = x,y
-    
+
     def tick(self):
         self.eat()
         self.food -= CREEP_FOOD_DECAY
@@ -107,9 +107,9 @@ class creep:
         self.speed = clamp(0,new_speed,CREEP_MAX_SPEED)
         self.facing = (self.facing + turn) % 360
         self.move()
-        
+
         self.age += 1
-    
+
     def draw(self,screen):
         pos = np.rint(np.array(self.pos)).astype(int)
         creep_color = hsv_color(self.hue,1,1)
@@ -121,10 +121,10 @@ class creep:
         phi = radians(self.facing)
         nose_pos = np.rint(pos + 0.6*CREEP_RADIUS * np.array([cos(phi),sin(phi)])).astype(int)
         pg.draw.circle(screen,CREEP_NOSE_COLOR,nose_pos,CREEP_NOSE_RADIUS,0)
-        
 
 
-    
+
+
 
 
 
@@ -135,7 +135,7 @@ N=10
 
 mybrains = [brain(NETWORK,[np.random.rand(NETWORK[1],NETWORK[0])*2 - 1,np.random.rand(NETWORK[2],NETWORK[1])*2 - 1]) for i in range(N)]
 
-generation = 1 
+generation = 1
 myfont = pg.font.SysFont("Arial",20)
 
 
@@ -147,8 +147,8 @@ def draw_world(world):
     for x,y in product(range(nx),range(ny)):
         pg.draw.rect(screen,hsv_color(0.33,world[x,y]/WORLD_FOOD_MAX,1),(x*dx,y*dy,dx,dy))
 #        pg.draw.rect(screen,hsv_color(120,1,1),(x*dx,y*dy,dx,dy))
-    return 
-    
+    return
+
 def draw_statistics(creeps): #this function needs better presentation, constants and should display more useful information
 #    sortedcreeps=[creeps[i] for i in np.argsort(np.array([cr.food for cr in creeps]))[::-1] ]
     sortedcreeps = creeps #don't sort?
@@ -156,8 +156,8 @@ def draw_statistics(creeps): #this function needs better presentation, constants
     for i in range(len(sortedcreeps)):
         cr = sortedcreeps[i]
         pg.draw.rect(screen,(255,0,0),(WORLD_WIDTH + 20, (i+1)*50, cr.food, 20))
-        
-        
+
+
 while True:
     i=0
     world = np.ones(WORLD_SIZE)*5 + np.random.rand(*WORLD_SIZE)*2
@@ -168,9 +168,9 @@ while True:
             break
         for event in pg.event.get():
             if event.type == pg.QUIT: sys.exit()
-            
+
         clock.tick(30)
-        
+
         world = np.minimum(world + np.ones(WORLD_SIZE)*FOOD_GROWTH, np.ones(WORLD_SIZE)*WORLD_FOOD_MAX)
         draw_world(world)
         for cr in mycreeps:
@@ -191,6 +191,3 @@ while True:
             varied_params = [old_params[0] + (np.random.rand(*old_params[0].shape)-0.5)*0.2,old_params[1] + (np.random.rand(*old_params[1].shape)-0.5)*0.2]
             mybrains += [brain(NETWORK,varied_params)]
     generation += 1
-        
-
-        
